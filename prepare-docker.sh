@@ -9,16 +9,21 @@ if [ ! -f "./zalo_data/proxies.json" ]; then
     echo "Created empty proxies.json"
 fi
 
-# Create webhook-config.json if it doesn't exist
-if [ ! -f "./zalo_data/webhook-config.json" ]; then
-    cat > ./zalo_data/webhook-config.json << EOF
-{
-  "messageWebhookUrl": "",
-  "groupEventWebhookUrl": "",
-  "reactionWebhookUrl": ""
-}
+# Create .env file if it doesn't exist
+if [ ! -f "./zalo_data/.env" ]; then
+    cat > ./zalo_data/.env << EOF
+MESSAGE_WEBHOOK_URL=
+GROUP_EVENT_WEBHOOK_URL=
+REACTION_WEBHOOK_URL=
+PORT=3000
 EOF
-    echo "Created webhook-config.json template"
+    echo "Created .env template in zalo_data directory"
+    
+    # Also create a root .env file for local development
+    if [ ! -f "./.env" ]; then
+        cp ./zalo_data/.env ./.env
+        echo "Created .env file in root directory for local development"
+    fi
 fi
 
 echo "Setup completed. You can now run 'docker-compose up -d'" 

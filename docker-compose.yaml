@@ -14,13 +14,13 @@ services:
         target: /app/proxies.json
         consistency: consistent
       - type: bind
-        source: ./zalo_data/webhook-config.json
-        target: /app/webhook-config.json
+        source: ./zalo_data/.env
+        target: /app/.env
         consistency: consistent
     environment:
       - PORT=3000
-      - MESSAGE_WEBHOOK_URL=${MESSAGE_WEBHOOK_URL:-/app/webhook-config.json}
-      - GROUP_EVENT_WEBHOOK_URL=${GROUP_EVENT_WEBHOOK_URL:-/app/webhook-config.json}
-      - REACTION_WEBHOOK_URL=${REACTION_WEBHOOK_URL:-/app/webhook-config.json}
+      - MESSAGE_WEBHOOK_URL=${MESSAGE_WEBHOOK_URL}
+      - GROUP_EVENT_WEBHOOK_URL=${GROUP_EVENT_WEBHOOK_URL}
+      - REACTION_WEBHOOK_URL=${REACTION_WEBHOOK_URL}
     restart: always
     working_dir: /app

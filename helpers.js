@@ -6,19 +6,20 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const configPath = path.join(__dirname, 'webhook-config.json');
 
 export function getWebhookUrl(key) {
     try {
-        if (fs.existsSync(configPath)) {
-            const content = fs.readFileSync(configPath, 'utf8');
-            const config = JSON.parse(content);
-            return config[key] || "";
+        if (key === 'messageWebhookUrl') {
+            return process.env.MESSAGE_WEBHOOK_URL || "";
+        } else if (key === 'groupEventWebhookUrl') {
+            return process.env.GROUP_EVENT_WEBHOOK_URL || "";
+        } else if (key === 'reactionWebhookUrl') {
+            return process.env.REACTION_WEBHOOK_URL || "";
         } else {
             return "";
         }
     } catch (error) {
-        console.error("Error reading webhook config:", error);
+        console.error("Error getting webhook config:", error);
         return "";
     }
 }

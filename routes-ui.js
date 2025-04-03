@@ -4,13 +4,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { zaloAccounts, loginZaloAccount } from './api/zalo/zalo.js';
 import { proxyService } from './proxyService.js';
+import dotenv from 'dotenv';
 
 const router = express.Router();
 
 // Dành cho ES Module: xác định __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const configPath = path.join(__dirname, 'webhook-config.json');
 
 router.get('/', (req, res) => {
     res.send(`
@@ -170,14 +170,61 @@ router.post('/updateWebhook', (req, res) => {
   if (!reactionWebhookUrl || !reactionWebhookUrl.startsWith("http")) {
       return res.status(400).json({ success: false, error: 'reactionWebhookUrl không hợp lệ' });
   }
-  const config = { messageWebhookUrl, groupEventWebhookUrl, reactionWebhookUrl };
-  fs.writeFile(configPath, JSON.stringify(config, null, 2), err => {
-      if (err) {
-          console.error("Lỗi khi ghi file cấu hình:", err);
-          return res.status(500).json({ success: false, error: err.message });
-      }
-      res.json({ success: true, message: 'Webhook URLs đã được cập nhật' });
-  });
+  
+  // Update process.env variables
+  process.env.MESSAGE_WEBHOOK_URL = messageWebhookUrl;
+  process.env.GROUP_EVENT_WEBHOOK_URL = groupEventWebhookUrl;
+  process.env.REACTION_WEBHOOK_URL = reactionWebhookUrl;
+  
+  // Function to update or add a key in the .env content
+  const updateEnvVar = (content, key, value) => {
+    const regex = new RegExp(`^${key}=.*`, 'gm');
+    const newLine = `${key}=${value}`;
+    
+    if (regex.test(content)) {
+      return content.replace(regex, newLine);
+    } else {
+      return content + (content && !content.endsWith('\n') ? '\n' : '') + newLine + '\n';
+    }
+  };
+  
+  // Update root .env file
+  const rootEnvPath = path.join(process.cwd(), '.env');
+  let rootEnvContent = '';
+  
+  // Read existing .env content if it exists
+  if (fs.existsSync(rootEnvPath)) {
+    rootEnvContent = fs.readFileSync(rootEnvPath, 'utf8');
+  }
+  
+  // Update all three webhook URLs
+  rootEnvContent = updateEnvVar(rootEnvContent, 'MESSAGE_WEBHOOK_URL', messageWebhookUrl);
+  rootEnvContent = updateEnvVar(rootEnvContent, 'GROUP_EVENT_WEBHOOK_URL', groupEventWebhookUrl);
+  rootEnvContent = updateEnvVar(rootEnvContent, 'REACTION_WEBHOOK_URL', reactionWebhookUrl);
+  
+  // Also update Docker volume .env file
+  const dockerEnvPath = path.join(process.cwd(), 'zalo_data', '.env');
+  let dockerEnvContent = '';
+  
+  // Read existing Docker .env content if it exists
+  if (fs.existsSync(dockerEnvPath)) {
+    dockerEnvContent = fs.readFileSync(dockerEnvPath, 'utf8');
+  }
+  
+  // Update all three webhook URLs in Docker .env
+  dockerEnvContent = updateEnvVar(dockerEnvContent, 'MESSAGE_WEBHOOK_URL', messageWebhookUrl);
+  dockerEnvContent = updateEnvVar(dockerEnvContent, 'GROUP_EVENT_WEBHOOK_URL', groupEventWebhookUrl);
+  dockerEnvContent = updateEnvVar(dockerEnvContent, 'REACTION_WEBHOOK_URL', reactionWebhookUrl);
+  
+  // Write to both .env files
+  try {
+    fs.writeFileSync(rootEnvPath, rootEnvContent);
+    fs.writeFileSync(dockerEnvPath, dockerEnvContent);
+    res.json({ success: true, message: 'Webhook URLs đã được cập nhật' });
+  } catch (err) {
+    console.error("Lỗi khi ghi file .env:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // API quản lý proxy
