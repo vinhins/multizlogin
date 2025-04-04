@@ -11,6 +11,7 @@ Hệ thống quản lý và tự động hóa tài khoản Zalo với hỗ trợ
 - Giới hạn gửi tin nhắn tự động để tránh bị chặn tài khoản
 - Tự động đăng nhập lại từ cookie đã lưu
 - Quản lý nhiều tài khoản Zalo cùng lúc
+- Hệ thống xác thực và quản lý người dùng
 
 ## Cài đặt
 
@@ -181,6 +182,38 @@ Truy cập `http://localhost:3000` và cấu hình webhook URLs. Hệ thống s�
 - Có sự kiện trong nhóm (GROUP_EVENT_WEBHOOK_URL)
 - Có reaction trên tin nhắn (REACTION_WEBHOOK_URL)
 
+### Quản lý người dùng
+
+Hệ thống có tích hợp quản lý người dùng với các chức năng:
+
+1. **Đăng nhập quản trị**:
+   - Truy cập: `http://localhost:3000/admin-login`
+   - Tài khoản mặc định: `admin/admin`
+
+2. **Thêm người dùng mới**:
+   - Truy cập: `http://localhost:3000/user-management` (yêu cầu đăng nhập với quyền admin)
+   - Điền thông tin người dùng: tên đăng nhập, mật khẩu và chọn vai trò (Người dùng thường/Quản trị viên)
+   - Nhấn "Thêm người dùng" để hoàn tất
+
+3. **Xem danh sách người dùng**:
+   - Truy cập: `http://localhost:3000/user-management` (yêu cầu đăng nhập với quyền admin)
+   - Danh sách người dùng hiển thị ở phần bên phải
+   - Nhấn "Làm mới danh sách" để cập nhật thông tin mới nhất
+
+4. **API quản lý người dùng**:
+   - `POST /api/users`: Thêm người dùng mới (admin only)
+   - `GET /api/users`: Lấy danh sách người dùng (admin only)
+   - `POST /api/login`: Đăng nhập
+   - `POST /api/logout`: Đăng xuất
+   - `POST /api/change-password`: Đổi mật khẩu
+   - `GET /api/check-auth`: Kiểm tra phiên đăng nhập
+
+5. **Vai trò người dùng**:
+   - **Quản trị viên (admin)**: Có quyền quản lý người dùng, truy cập tất cả tính năng
+   - **Người dùng thường (user)**: Chỉ có quyền sử dụng các tính năng cơ bản của hệ thống
+
+Dữ liệu người dùng được lưu trong file `cookies/users.json` và được mã hóa an toàn.
+
 ### Giới hạn gửi tin nhắn
 
 Để tránh bị chặn tài khoản Zalo, tuân thủ các giới hạn sau:
@@ -206,6 +239,9 @@ multizlogin/
 ├── routes-ui.js          # UI endpoints
 ├── helpers.js            # Các hàm tiện ích
 ├── proxyService.js       # Dịch vụ quản lý proxy
+├── auth.js               # Hệ thống xác thực và quản lý người dùng
+├── admin-login.html      # Giao diện đăng nhập quản trị
+├── user-management.html  # Giao diện quản lý người dùng
 ├── .env                  # Cấu hình biến môi trường
 └── ...
 ```
@@ -220,6 +256,9 @@ Tham khảo tài liệu API đầy đủ tại: `http://localhost:3000/list`
 # Xóa file .env cũ trước khi build để tránh lộ thông tin cá nhân
 rm -f .env
 cp .env.example .env
+
+# nếu dùng powershell
+rm .env -Force
 
 # Build image
 docker build -t zalo-server .

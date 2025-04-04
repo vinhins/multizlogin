@@ -12,15 +12,92 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Route đăng nhập quản trị
+router.get('/admin-login', (req, res) => {
+  // Nếu đã đăng nhập, chuyển hướng về trang chủ
+  if (req.session && req.session.authenticated) {
+    return res.redirect('/');
+  }
+  
+  const loginFile = path.join(__dirname, 'admin-login.html');
+  console.log("Login file path:", loginFile);
+  
+  fs.readFile(loginFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Lỗi khi đọc file admin-login.html:', err);
+      return res.status(500).send('Không thể tải trang đăng nhập.');
+    }
+    res.send(data);
+  });
+});
+
+// Thêm thông tin session vào trang chủ
 router.get('/', (req, res) => {
+    let authenticated = false;
+    let username = '';
+    let isAdmin = false;
+    
+    if (req.session && req.session.authenticated) {
+      authenticated = true;
+      username = req.session.username;
+      isAdmin = req.session.role === 'admin';
+    }
+    
     res.send(`
   <!DOCTYPE html>
   <html lang="vi">
   <head>
     <meta charset="UTF-8">
     <title>Zalo server</title>
+    <style>
+      .user-info {
+        background-color: #f0f8ff;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .logout-btn {
+        background-color: #ff3b30;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .login-btn, .admin-btn {
+        background-color: #007aff;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        margin-left: 10px;
+      }
+      .admin-links {
+        margin-top: 10px;
+      }
+    </style>
   </head>
   <body>
+    <div class="user-info">
+      ${authenticated 
+        ? `<div>
+             <span>Đăng nhập với tài khoản: <strong>${username}</strong></span>
+             ${isAdmin ? `<div class="admin-links">
+               <a href="/user-management" class="admin-btn">Quản lý người dùng</a>
+             </div>` : ''}
+           </div>
+           <button class="logout-btn" onclick="logout()">Đăng xuất</button>` 
+        : `<span>Chưa đăng nhập</span>
+           <a href="/admin-login" class="login-btn">Đăng nhập</a>`
+      }
+    </div>
+    
     <h1>Zalo server - Đăng nhập qua QR Code với Proxy</h1>
     <p><strong>(Mỗi Proxy tối đa 3 tài khoản)</strong></p>
     
@@ -46,6 +123,29 @@ router.get('/', (req, res) => {
         </ul>
       </li>
     </ul>
+    
+    <script>
+      function logout() {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('Lỗi khi đăng xuất: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Lỗi:', error);
+          alert('Đã xảy ra lỗi khi đăng xuất');
+        });
+      }
+    </script>
   </body>
   </html>
     `);
@@ -259,6 +359,37 @@ router.delete('/proxies', (req, res) => {
   } catch (error) {
       res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Route test session
+router.get('/session-test', (req, res) => {
+  const testFile = path.join(__dirname, 'session-test.html');
+  
+  fs.readFile(testFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Lỗi khi đọc file session-test.html:', err);
+      return res.status(500).send('Không thể tải trang kiểm tra session.');
+    }
+    res.send(data);
+  });
+});
+
+// Route quản lý người dùng
+router.get('/user-management', (req, res) => {
+  // Kiểm tra xem người dùng đã đăng nhập và có quyền admin chưa
+  if (!req.session || !req.session.authenticated || req.session.role !== 'admin') {
+    return res.redirect('/admin-login');
+  }
+  
+  const userManagementFile = path.join(__dirname, 'user-management.html');
+  
+  fs.readFile(userManagementFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Lỗi khi đọc file user-management.html:', err);
+      return res.status(500).send('Không thể tải trang quản lý người dùng.');
+    }
+    res.send(data);
+  });
 });
 
 export default router;
