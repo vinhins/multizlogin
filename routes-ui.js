@@ -81,6 +81,20 @@ router.get('/', (req, res) => {
       .admin-links {
         margin-top: 10px;
       }
+      .feature-links {
+        margin-top: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .feature-link {
+        background-color: #4CAF50;
+        color: white;
+        text-decoration: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        display: inline-block;
+      }
     </style>
   </head>
   <body>
@@ -100,6 +114,14 @@ router.get('/', (req, res) => {
     
     <h1>Zalo server - Đăng nhập qua QR Code với Proxy</h1>
     <p><strong>(Mỗi Proxy tối đa 3 tài khoản)</strong></p>
+    
+    <div class="feature-links">
+      <a href="/zalo-login" class="feature-link">Đăng nhập tài khoản Zalo</a>
+      <a href="/accounts" class="feature-link">Danh sách tài khoản</a>
+      <a href="/updateWebhookForm" class="feature-link">Cấu hình webhook chung</a>
+      <a href="/account-webhook-manager" class="feature-link">Cấu hình webhook theo tài khoản</a>
+      <a href="/list" class="feature-link">Tài liệu API</a>
+    </div>
     
     <h2>CÁCH CÀI GIỚI HẠN GỬI NGƯỜI LẠ ZALO:</h2>
     <ul>
@@ -229,14 +251,14 @@ router.get('/accounts', (req, res) => {
     if (zaloAccounts.length === 0) {
         return res.json({ success: true, message: 'Chưa có tài khoản nào đăng nhập' });
     }
+    
     const accounts = zaloAccounts.map(account => ({
         ownId: account.ownId,
         proxy: account.proxy,
         phoneNumber: account.phoneNumber || 'N/A',
     }));
     
-
-    // Tạo bảng HTML
+    // Tạo bảng HTML cho các yêu cầu từ trình duyệt
     let html = '<table border="1">';
     html += '<thead><tr>';
     const headers = ['Own ID', 'Phone Number', 'Proxy'];
@@ -248,13 +270,25 @@ router.get('/accounts', (req, res) => {
         html += '<tr>';
         html += `<td>${account.ownId}</td>`;
         html += `<td>${account.phoneNumber || 'N/A'}</td>`;
-        html += `<td>${account.proxy}</td>`;
+        html += `<td>${account.proxy || 'Không có'}</td>`;
         html += '</tr>';
     });
     html += '</tbody></table>';
     
-
-    res.send(html);
+    // Kiểm tra Accept header để quyết định định dạng trả về
+    const acceptHeader = req.headers.accept || '';
+    
+    if (acceptHeader.includes('application/json')) {
+        // Trả về JSON cho API calls
+        return res.json({ 
+            success: true, 
+            accounts: accounts,
+            html: html
+        });
+    } else {
+        // Trả về HTML cho truy cập trực tiếp từ trình duyệt
+        res.send(html);
+    }
 });
 
 // Endpoint cập nhật 3 webhook URL
@@ -387,6 +421,18 @@ router.get('/user-management', (req, res) => {
     if (err) {
       console.error('Lỗi khi đọc file user-management.html:', err);
       return res.status(500).send('Không thể tải trang quản lý người dùng.');
+    }
+    res.send(data);
+  });
+});
+
+// Hiển thị trang quản lý webhook theo tài khoản
+router.get('/account-webhook-manager', (req, res) => {
+  const webhookManagerFile = path.join(__dirname, 'account-webhook-manager.html');
+  fs.readFile(webhookManagerFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Lỗi khi đọc file account-webhook-manager.html:', err);
+      return res.status(500).send('Không thể tải trang quản lý webhook.');
     }
     res.send(data);
   });

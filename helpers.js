@@ -3,25 +3,13 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getWebhookUrl as getConfigWebhookUrl } from './webhookConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export function getWebhookUrl(key) {
-    try {
-        if (key === 'messageWebhookUrl') {
-            return process.env.MESSAGE_WEBHOOK_URL || "";
-        } else if (key === 'groupEventWebhookUrl') {
-            return process.env.GROUP_EVENT_WEBHOOK_URL || "";
-        } else if (key === 'reactionWebhookUrl') {
-            return process.env.REACTION_WEBHOOK_URL || "";
-        } else {
-            return "";
-        }
-    } catch (error) {
-        console.error("Error getting webhook config:", error);
-        return "";
-    }
+export function getWebhookUrl(key, ownId) {
+    return getConfigWebhookUrl(key, ownId);
 }
 
 export async function triggerN8nWebhook(msg, webhookUrl) {

@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { authMiddleware, isPublicRoute } from './auth.js';
+import { loadWebhookConfig } from './webhookConfig.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -14,31 +15,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let webhookConfig = {};
-
-// Function to load webhook config
-function loadWebhookConfig() {
-    const messageWebhookUrl = process.env.MESSAGE_WEBHOOK_URL;
-    const groupEventWebhookUrl = process.env.GROUP_EVENT_WEBHOOK_URL;
-    const reactionWebhookUrl = process.env.REACTION_WEBHOOK_URL;
-
-    if (messageWebhookUrl && groupEventWebhookUrl && reactionWebhookUrl) {
-        // Environment variables are set, use them
-        webhookConfig = {
-            messageWebhookUrl: messageWebhookUrl,
-            groupEventWebhookUrl: groupEventWebhookUrl,
-            reactionWebhookUrl: reactionWebhookUrl,
-        };
-    }
-}
-
-// Load the config when the application starts
+// Tải cấu hình webhook từ file
 loadWebhookConfig();
-
-// Now you can use webhookConfig.messageWebhookUrl, webhookConfig.groupEventWebhookUrl, and webhookConfig.reactionWebhookUrl
-console.log("Message Webhook URL:", webhookConfig.messageWebhookUrl);
-console.log("Group Event Webhook URL:", webhookConfig.groupEventWebhookUrl);
-console.log("Reaction Webhook URL:", webhookConfig.reactionWebhookUrl);
+console.log("Đã tải cấu hình webhook");
 
 // Thiết lập middleware
 app.use(express.json());

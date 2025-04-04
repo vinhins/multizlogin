@@ -205,6 +205,11 @@ export const publicRoutes = [
   '/api/check-auth',
   '/api/session-test',
   '/api/test-json',
+  '/api/account-webhooks',
+  '/api/account-webhook',
+  '/api/debug-webhook-config',
+  '/accounts',
+  '/account-webhook-manager',
   '/__webpack_hmr', // Cho webpack hot module replacement nếu sử dụng
   '/favicon.ico'
 ];
@@ -215,14 +220,36 @@ export const isPublicRoute = (path) => {
   
   // Kiểm tra các route API công khai
   if (path.startsWith('/api/')) {
-    console.log('API route detected, checking public routes');
-    const isPublic = publicRoutes.some(route => path.startsWith(route));
+    // Xử lý các route có tham số động (như /api/account-webhook/:ownId)
+    if (path.startsWith('/api/account-webhook/')) {
+      return true;
+    }
+    
+    // Kiểm tra các route cụ thể
+    const isPublic = publicRoutes.some(route => {
+      // Nếu route bắt đầu bằng /api/ và path cũng bắt đầu bằng route đó
+      return route.startsWith('/api/') && path.startsWith(route);
+    });
+    
     console.log('Is public API route:', isPublic);
     return isPublic;
   }
   
   // Kiểm tra các route UI công khai
-  const isPublic = publicRoutes.some(route => path === route);
-  console.log('Is public UI route:', isPublic);
-  return isPublic;
+  for (const route of publicRoutes) {
+    // Kiểm tra exact match
+    if (path === route) {
+      console.log('Is public UI route (exact match):', true);
+      return true;
+    }
+    
+    // Kiểm tra prefix match cho routes như /accounts/*
+    if (!route.startsWith('/api/') && route.endsWith('*') && path.startsWith(route.slice(0, -1))) {
+      console.log('Is public UI route (prefix match):', true);
+      return true;
+    }
+  }
+  
+  console.log('Is public UI route:', false);
+  return false;
 }; 

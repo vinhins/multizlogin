@@ -9,45 +9,53 @@ export const reloginAttempts = new Map();
 const RELOGIN_COOLDOWN = 5 * 60 * 1000;
 
 export function setupEventListeners(api, loginResolve) {
+    const ownId = api.getOwnId();
+    
     // Lắng nghe sự kiện tin nhắn và gửi đến webhook được cấu hình cho tin nhắn
     api.listener.on("message", (msg) => {
-        const messageWebhookUrl = getWebhookUrl("messageWebhookUrl");
+        const messageWebhookUrl = getWebhookUrl("messageWebhookUrl", ownId);
         if (messageWebhookUrl) {
-            triggerN8nWebhook(msg, messageWebhookUrl);
+            // Thêm ownId vào dữ liệu để webhook biết tin nhắn từ tài khoản nào
+            const msgWithOwnId = { ...msg, _accountId: ownId };
+            triggerN8nWebhook(msgWithOwnId, messageWebhookUrl);
         }
     });
 
     // Lắng nghe sự kiện nhóm và gửi đến webhook được cấu hình cho sự kiện nhóm
     api.listener.on("group_event", (data) => {
-        const groupEventWebhookUrl = getWebhookUrl("groupEventWebhookUrl");
+        const groupEventWebhookUrl = getWebhookUrl("groupEventWebhookUrl", ownId);
         if (groupEventWebhookUrl) {
-            triggerN8nWebhook(data, groupEventWebhookUrl);
+            // Thêm ownId vào dữ liệu
+            const dataWithOwnId = { ...data, _accountId: ownId };
+            triggerN8nWebhook(dataWithOwnId, groupEventWebhookUrl);
         }
     });
 
     // Lắng nghe sự kiện reaction và gửi đến webhook được cấu hình cho reaction
     api.listener.on("reaction", (reaction) => {
-        const reactionWebhookUrl = getWebhookUrl("reactionWebhookUrl");
+        const reactionWebhookUrl = getWebhookUrl("reactionWebhookUrl", ownId);
         console.log("Nhận reaction:", reaction);
         if (reactionWebhookUrl) {
-            triggerN8nWebhook(reaction, reactionWebhookUrl);
+            // Thêm ownId vào dữ liệu
+            const reactionWithOwnId = { ...reaction, _accountId: ownId };
+            triggerN8nWebhook(reactionWithOwnId, reactionWebhookUrl);
         }
     });
 
     api.listener.onConnected(() => {
-        console.log("Connected");
+        console.log(`Connected account ${ownId}`);
         loginResolve('login_success');
     });
     
     api.listener.onClosed(() => {
-        console.log("Closed - API listener đã ngắt kết nối");
+        console.log(`Closed - API listener đã ngắt kết nối cho tài khoản ${ownId}`);
         
         // Xử lý đăng nhập lại khi API listener bị đóng
         handleRelogin(api);
     });
     
     api.listener.onError((error) => {
-        console.error("Error:", error);
+        console.error(`Error on account ${ownId}:`, error);
     });
 }
 
