@@ -15,14 +15,14 @@ import {
     sendImagesToUser,
     sendImageToGroup,
     sendImagesToGroup
-} from './zaloService.js';
-import { validateUser, adminMiddleware, addUser, getAllUsers, changePassword } from './auth.js';
+} from '../api/zalo/zalo.js';
+import { validateUser, adminMiddleware, addUser, getAllUsers, changePassword } from '../services/authService.js';
 import { 
     getWebhookUrl, 
     setWebhookUrl, 
     removeWebhookConfig, 
     getAllWebhookConfigs 
-} from './webhookConfig.js';
+} from '../services/webhookService.js';
 
 const router = express.Router();
 
@@ -289,18 +289,18 @@ router.get('/session-test', (req, res) => {
 
 // Thêm một API đăng nhập đơn giản mới để test - simplified
 router.post('/test-login', (req, res) => {
-  console.log('Simple test login received:', req.body);
+  console.log('Test login received:', req.body);
   
   try {
     const { username, password } = req.body || {};
     
     console.log(`Login attempt: username=${username}, password=${typeof password === 'string' ? 'provided' : 'missing'}`);
+    console.log('Session info:', req.session ? 'session exists' : 'no session', req.sessionID || 'no session ID');
     
     // Basic validation
     if (!username || !password) {
-      const errorResponse = { success: false, message: 'Username and password required' };
-      console.log('Sending error response:', errorResponse);
-      return res.json(errorResponse);
+      console.log('Missing username or password');
+      return res.status(400).json({ success: false, message: 'Tài khoản và mật khẩu không được để trống' });
     }
     
     // Simple check
@@ -310,23 +310,42 @@ router.post('/test-login', (req, res) => {
         req.session.authenticated = true;
         req.session.username = 'admin';
         req.session.role = 'admin';
+        
+        // Force save session to ensure cookie is set
+        req.session.save(err => {
+          if (err) {
+            console.error('Session save error:', err);
+          }
+          
+          console.log('Session saved:', req.sessionID);
+          
+          // Success response with session ID
+          return res.json({ 
+            success: true, 
+            user: { username: 'admin', role: 'admin' },
+            sessionID: req.sessionID,
+            message: 'Đăng nhập thành công'
+          });
+        });
+      } else {
+        console.error('No session object available');
+        return res.json({ 
+          success: true, 
+          user: { username: 'admin', role: 'admin' },
+          sessionAvailable: false,
+          message: 'Đăng nhập thành công, nhưng session không khả dụng'
+        });
       }
-      
-      const successResponse = { success: true, user: { username: 'admin', role: 'admin' } };
-      console.log('Sending success response:', successResponse);
-      return res.json(successResponse);
-    } 
-    
-    // Invalid credentials
-    const errorResponse = { success: false, message: 'Invalid credentials' };
-    console.log('Sending error response:', errorResponse);
-    return res.json(errorResponse);
-    
+    } else {
+      // Invalid credentials
+      console.log('Invalid credentials');
+      return res.status(401).json({ success: false, message: 'Tài khoản hoặc mật khẩu không chính xác' });
+    }
   } catch (error) {
     console.error('Error in test-login:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: 'Lỗi server',
       error: error.message
     });
   }

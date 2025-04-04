@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Đường dẫn đến file lưu thông tin đăng nhập
-const userFilePath = path.join(__dirname, 'cookies', 'users.json');
+const userFilePath = path.join(process.cwd(), 'data', 'cookies', 'users.json');
 console.log("Path to users.json:", userFilePath); // Log để debug
 
 // Tạo file users.json nếu chưa tồn tại
@@ -17,9 +17,10 @@ const initUserFile = () => {
     console.log("Khởi tạo file người dùng...");
     
     // Kiểm tra và tạo thư mục cookies nếu chưa tồn tại
-    if (!fs.existsSync(path.join(__dirname, 'cookies'))) {
+    const cookiesDir = path.join(process.cwd(), 'data', 'cookies');
+    if (!fs.existsSync(cookiesDir)) {
       console.log("Thư mục cookies không tồn tại, đang tạo...");
-      fs.mkdirSync(path.join(__dirname, 'cookies'), { recursive: true });
+      fs.mkdirSync(cookiesDir, { recursive: true });
       console.log("Đã tạo thư mục cookies thành công");
     } else {
       console.log("Thư mục cookies đã tồn tại");
@@ -196,22 +197,19 @@ export const getAllUsers = () => {
 
 // Danh sách các route công khai (không cần xác thực)
 export const publicRoutes = [
-  '/admin-login',
-  '/session-test',
-  '/api/login',
-  '/api/simple-login',
-  '/api/test-login',
-  '/api/logout',
-  '/api/check-auth',
-  '/api/session-test',
-  '/api/test-json',
-  '/api/account-webhooks',
-  '/api/account-webhook',
-  '/api/debug-webhook-config',
-  '/accounts',
-  '/account-webhook-manager',
-  '/__webpack_hmr', // Cho webpack hot module replacement nếu sử dụng
-  '/favicon.ico'
+  '/', // Trang chủ hiển thị nút đăng nhập
+  '/admin-login', // Trang đăng nhập
+  '/session-test', // Trang kiểm tra session
+  '/api/login', // API đăng nhập
+  '/api/simple-login', // API đăng nhập đơn giản
+  '/api/test-login', // API đăng nhập test
+  '/api/logout', // API đăng xuất
+  '/api/check-auth', // API kiểm tra trạng thái xác thực
+  '/api/session-test', // API kiểm tra session
+  '/api/test-json', // API test JSON
+  '/api/account-webhook/', // API webhook có tham số
+  '/favicon.ico', // Favicon
+  '/ws' // WebSocket
 ];
 
 // Kiểm tra xem route có phải là public hay không
@@ -220,36 +218,45 @@ export const isPublicRoute = (path) => {
   
   // Kiểm tra các route API công khai
   if (path.startsWith('/api/')) {
-    // Xử lý các route có tham số động (như /api/account-webhook/:ownId)
+    // Xử lý các route có tham số động
     if (path.startsWith('/api/account-webhook/')) {
+      console.log('Is account webhook API with parameters:', true);
       return true;
     }
     
-    // Kiểm tra các route cụ thể
-    const isPublic = publicRoutes.some(route => {
-      // Nếu route bắt đầu bằng /api/ và path cũng bắt đầu bằng route đó
-      return route.startsWith('/api/') && path.startsWith(route);
-    });
+    // Kiểm tra các route cụ thể trong danh sách publicRoutes
+    for (const route of publicRoutes) {
+      if (route.startsWith('/api/') && (
+        path === route || // Trùng khớp chính xác
+        (route.endsWith('/') && path.startsWith(route)) // Route kết thúc bằng / và path bắt đầu bằng route
+      )) {
+        console.log('Is public API route:', true);
+        return true;
+      }
+    }
     
-    console.log('Is public API route:', isPublic);
-    return isPublic;
+    console.log('Is public API route:', false);
+    return false;
   }
   
   // Kiểm tra các route UI công khai
   for (const route of publicRoutes) {
+    // Bỏ qua các route API
+    if (route.startsWith('/api/')) continue;
+    
     // Kiểm tra exact match
     if (path === route) {
       console.log('Is public UI route (exact match):', true);
       return true;
     }
     
-    // Kiểm tra prefix match cho routes như /accounts/*
-    if (!route.startsWith('/api/') && route.endsWith('*') && path.startsWith(route.slice(0, -1))) {
+    // Kiểm tra prefix match cho routes như /route/*
+    if (route.endsWith('*') && path.startsWith(route.slice(0, -1))) {
       console.log('Is public UI route (prefix match):', true);
       return true;
     }
   }
   
-  console.log('Is public UI route:', false);
+  console.log('Is public route:', false);
   return false;
 }; 

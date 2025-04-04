@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Đường dẫn đến file cấu hình webhook
-const webhookConfigPath = path.join(__dirname, 'webhookConfig.json');
+const webhookConfigPath = path.join(process.cwd(), 'src/config/webhookConfig.json');
 
 // Cấu trúc dữ liệu mặc định
 const defaultConfig = {

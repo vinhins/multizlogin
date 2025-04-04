@@ -1,7 +1,8 @@
 import { GroupEventType } from "zca-js";
-import { getWebhookUrl, triggerN8nWebhook } from './helpers.js';
+import { getWebhookUrl, triggerN8nWebhook } from './utils/helpers.js';
 import fs from 'fs';
 import { loginZaloAccount, zaloAccounts } from './api/zalo/zalo.js';
+import { broadcastMessage } from './server.js';
 
 // Biến để theo dõi thời gian relogin cho từng tài khoản
 export const reloginAttempts = new Map();
@@ -45,6 +46,13 @@ export function setupEventListeners(api, loginResolve) {
     api.listener.onConnected(() => {
         console.log(`Connected account ${ownId}`);
         loginResolve('login_success');
+        
+        // Gửi thông báo đến tất cả client
+        try {
+            broadcastMessage('login_success');
+        } catch (err) {
+            console.error('Lỗi khi gửi thông báo WebSocket:', err);
+        }
     });
     
     api.listener.onClosed(() => {
@@ -89,7 +97,7 @@ async function handleRelogin(api) {
         const customProxy = accountInfo?.proxy || null;
         
         // Tìm file cookie tương ứng
-        const cookiesDir = './cookies';
+        const cookiesDir = './data/cookies';
         const cookieFile = `${cookiesDir}/cred_${ownId}.json`;
         
         if (!fs.existsSync(cookieFile)) {
