@@ -257,8 +257,9 @@ Tham khảo tài liệu API đầy đủ tại: `http://localhost:3000/list`
 rm -f .env
 cp .env.example .env
 
-# nếu dùng powershell
-rm .env -Force
+# Nếu dùng PowerShell trên Windows
+# Remove-Item .env -Force
+# Copy-Item .env.example .env
 
 # Build image
 docker build -t zalo-server .
@@ -280,6 +281,47 @@ docker push cangphamdocker/zalo-server:latest
 ## Tác giả
 
 - [Phạm Sỹ Cang](https://github.com/CangPham)
+
+## Lời cảm ơn
+
+Dự án này không thể thực hiện được nếu không có những đóng góp quý báu từ cộng đồng. Tôi muốn gửi lời cảm ơn chân thành đến:
+
+### Team ZCA
+
+Xin gửi lời cảm ơn đặc biệt đến team ZCA đã phát triển thư viện [zca-js](https://github.com/RFS-ADRENO/zca-js) - nền tảng cốt lõi để dự án này có thể tương tác với Zalo. 
+
+Team ZCA đã thực hiện công việc đáng kinh ngạc trong việc nghiên cứu và tìm hiểu cách thức hoạt động của Zalo, đồng thời phát triển một thư viện mạnh mẽ cho phép tương tác theo chương trình với nền tảng này. Mặc dù đây là một thư viện không chính thức, nhưng chất lượng và tính ổn định của thư viện đã cho phép tôi xây dựng dự án này một cách hiệu quả.
+
+Nếu bạn quan tâm đến công việc của team ZCA, hãy ghé thăm: 
+- GitHub: [https://github.com/RFS-ADRENO](https://github.com/RFS-ADRENO)
+- Thư viện zca-js: [https://github.com/RFS-ADRENO/zca-js](https://github.com/RFS-ADRENO/zca-js)
+
+Trân trọng và ghi nhận những nỗ lực đáng kinh ngạc của họ!
+
+## Miễn trừ trách nhiệm
+
+**Lưu ý quan trọng:**
+
+Dự án này sử dụng thư viện không chính thức (unofficial) từ team ZCA và tương tác với Zalo API thông qua các phương thức không được Zalo hỗ trợ chính thức.
+
+1. **Không phải là sản phẩm chính thức:** Đây KHÔNG phải là sản phẩm được phát triển hoặc phê duyệt bởi Zalo. Đây là dự án cá nhân sử dụng kỹ thuật reverse engineering.
+
+2. **Rủi ro sử dụng:** Việc sử dụng các API không chính thức có thể dẫn đến:
+   - Tài khoản Zalo bị khóa tạm thời hoặc vĩnh viễn
+   - Ngắt kết nối đột ngột do thay đổi từ phía Zalo
+   - Lỗ hổng bảo mật tiềm ẩn
+   - Hoạt động không ổn định khi Zalo cập nhật nền tảng của họ
+
+3. **Giới hạn và tuân thủ:** Người dùng nên:
+   - Tuân thủ nghiêm ngặt các giới hạn gửi tin nhắn được đề cập trong tài liệu
+   - Không sử dụng cho mục đích spam hoặc lạm dụng dịch vụ Zalo
+   - Chỉ sử dụng cho mục đích cá nhân hoặc phát triển
+
+4. **Không hỗ trợ thương mại:** Dự án này được cung cấp "nguyên trạng" mà không có bảo đảm dưới bất kỳ hình thức nào, rõ ràng hay ngụ ý.
+
+5. **Thư viện bên thứ ba:** Dự án này sử dụng thư viện zca-js từ team ZCA. Chúng tôi ghi nhận và đánh giá cao công việc của họ, nhưng không chịu trách nhiệm về bất kỳ vấn đề nào phát sinh từ việc sử dụng thư viện này.
+
+Bằng việc sử dụng dự án này, bạn xác nhận rằng bạn đã đọc, hiểu và đồng ý với tất cả các điều khoản miễn trừ trách nhiệm nêu trên.
 
 ## License
 
