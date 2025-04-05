@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Create zalo_data structure
+# Create zalo_data structure with all required subdirectories
 mkdir -p zalo_data/cookies
 
 # Create proxies.json if it doesn't exist

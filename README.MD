@@ -56,7 +56,7 @@ Hệ thống quản lý đa tài khoản Zalo, hỗ trợ đăng nhập và qu�
 
 1. Chuẩn bị môi trường Docker:
    ```
-   ./prepare-docker.sh
+   ./scripts/prepare-docker.sh
    ```
    Script này sẽ tạo thư mục `zalo_data` và các file cần thiết.
 
@@ -75,8 +75,51 @@ Hệ thống quản lý đa tài khoản Zalo, hỗ trợ đăng nhập và qu�
 
 4. Cập nhật và triển khai image mới:
    ```
-   ./update-zalo-server.sh
+   ./scripts/update-zalo-server.sh
    ```
+
+### Xuất bản Docker Image
+
+Nếu bạn muốn build và xuất bản Docker image của riêng mình:
+
+1. Trước khi build, làm sạch thông tin nhạy cảm:
+   ```
+   ./scripts/clean-for-publish.sh
+   ```
+   Script này sẽ tạo bản sao lưu thông tin nhạy cảm và làm sạch dự án để xuất bản an toàn.
+
+2. Build và xuất bản image:
+   ```
+   docker-compose -f docker-compose.new.yaml build
+   docker tag multizlogin_zalo-server:latest yourusername/zalo-server:latest
+   docker push yourusername/zalo-server:latest
+   ```
+
+3. Sau khi xuất bản xong, khôi phục lại thông tin nhạy cảm:
+   ```
+   ./scripts/restore-after-publish.sh
+   ```
+
+> **Lưu ý**: Scripts mới đã được di chuyển vào thư mục `scripts/`. Nếu bạn sử dụng các script từ thư mục gốc, hãy cập nhật để sử dụng phiên bản mới từ thư mục `scripts/`.
+
+### Xử lý lỗi Docker Build
+
+Nếu bạn gặp lỗi liên quan đến thiếu module như "Cannot find module 'ejs'" khi chạy Docker, hãy sử dụng script sau để sửa:
+
+```bash
+./scripts/fix-docker-build.sh
+```
+
+Script này sẽ:
+- Cập nhật Dockerfile để cài đặt đúng các dependencies
+- Cập nhật .dockerignore để loại trừ các file không cần thiết
+- Cung cấp tùy chọn để build lại Docker image ngay lập tức
+
+Sau khi chạy script này, bạn có thể khởi động lại container:
+
+```bash
+docker-compose -f docker-compose.new.yaml up -d
+```
 
 ## Sử dụng
 

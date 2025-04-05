@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Create zalo_data directory if it doesn't exist
-mkdir -p zalo_data
+# Create zalo_data directory with all required subdirectories
+mkdir -p zalo_data/cookies
 
 # Create proxies.json if it doesn't exist
 if [ ! -f "./zalo_data/proxies.json" ]; then
