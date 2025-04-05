@@ -209,7 +209,21 @@ export const publicRoutes = [
   '/api/test-json', // API test JSON
   '/api/account-webhook/', // API webhook có tham số
   '/favicon.ico', // Favicon
-  '/ws' // WebSocket
+  '/ws', // WebSocket
+  
+  // Thêm các API Zalo không cần xác thực
+  '/api/findUser',
+  '/api/getUserInfo',
+  '/api/sendFriendRequest',
+  '/api/sendmessage',
+  '/api/createGroup',
+  '/api/getGroupInfo',
+  '/api/addUserToGroup',
+  '/api/removeUserFromGroup',
+  '/api/sendImageToUser',
+  '/api/sendImagesToUser',
+  '/api/sendImageToGroup',
+  '/api/sendImagesToGroup'
 ];
 
 // Kiểm tra xem route có phải là public hay không
