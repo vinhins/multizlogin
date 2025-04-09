@@ -23,17 +23,17 @@ router.get('/admin-login', (req, res) => {
     console.log("User already authenticated, redirecting to home page");
     return res.redirect('/');
   }
-  
+
   // Đường dẫn tuyệt đối đến file admin-login.ejs
   const templatePath = path.join(process.cwd(), 'src', 'views', 'admin-login.ejs');
-  
+
   // Kiểm tra nếu file tồn tại
   if (fs.existsSync(templatePath)) {
     console.log(`Template file exists at: ${templatePath}`);
   } else {
     console.log(`Template file does NOT exist at: ${templatePath}`);
   }
-  
+
   try {
     res.render('admin-login');
     console.log("Rendered admin-login template");
@@ -48,13 +48,13 @@ router.get('/', (req, res) => {
     let authenticated = false;
     let username = '';
     let isAdmin = false;
-    
+
     if (req.session && req.session.authenticated) {
       authenticated = true;
       username = req.session.username;
       isAdmin = req.session.role === 'admin';
     }
-    
+
     res.render('index', {
       authenticated: authenticated,
       username: username,
@@ -73,10 +73,10 @@ router.post('/zalo-login', async (req, res) => {
         console.log('Nhận yêu cầu tạo mã QR với dữ liệu:', req.body);
         const { proxy } = req.body;
         console.log('Đang tạo mã QR với proxy:', proxy || 'không có proxy');
-        
+
         const qrCodeImage = await loginZaloAccount(proxy, null);
         console.log('Đã tạo mã QR thành công, độ dài:', qrCodeImage ? qrCodeImage.length : 0);
-        
+
         res.json({ success: true, qrCodeImage });
     } catch (error) {
         console.error('Lỗi khi tạo mã QR:', error);
@@ -99,13 +99,13 @@ router.get('/accounts', (req, res) => {
     if (zaloAccounts.length === 0) {
         return res.json({ success: true, message: 'Chưa có tài khoản nào đăng nhập' });
     }
-    
+
     const accounts = zaloAccounts.map(account => ({
         ownId: account.ownId,
         proxy: account.proxy,
         phoneNumber: account.phoneNumber || 'N/A',
     }));
-    
+
     // Tạo bảng HTML cho các yêu cầu từ trình duyệt
     let html = '<table border="1">';
     html += '<thead><tr>';
@@ -122,14 +122,14 @@ router.get('/accounts', (req, res) => {
         html += '</tr>';
     });
     html += '</tbody></table>';
-    
+
     // Kiểm tra Accept header để quyết định định dạng trả về
     const acceptHeader = req.headers.accept || '';
-    
+
     if (acceptHeader.includes('application/json')) {
         // Trả về JSON cho API calls
-        return res.json({ 
-            success: true, 
+        return res.json({
+            success: true,
             accounts: accounts,
             html: html
         });
@@ -152,52 +152,52 @@ router.post('/updateWebhook', (req, res) => {
   if (!reactionWebhookUrl || !reactionWebhookUrl.startsWith("http")) {
       return res.status(400).json({ success: false, error: 'reactionWebhookUrl không hợp lệ' });
   }
-  
+
   // Update process.env variables
   process.env.MESSAGE_WEBHOOK_URL = messageWebhookUrl;
   process.env.GROUP_EVENT_WEBHOOK_URL = groupEventWebhookUrl;
   process.env.REACTION_WEBHOOK_URL = reactionWebhookUrl;
-  
+
   // Function to update or add a key in the .env content
   const updateEnvVar = (content, key, value) => {
     const regex = new RegExp(`^${key}=.*`, 'gm');
     const newLine = `${key}=${value}`;
-    
+
     if (regex.test(content)) {
       return content.replace(regex, newLine);
     } else {
       return content + (content && !content.endsWith('\n') ? '\n' : '') + newLine + '\n';
     }
   };
-  
+
   // Update root .env file
   const rootEnvPath = path.join(process.cwd(), '.env');
   let rootEnvContent = '';
-  
+
   // Read existing .env content if it exists
   if (fs.existsSync(rootEnvPath)) {
     rootEnvContent = fs.readFileSync(rootEnvPath, 'utf8');
   }
-  
+
   // Update all three webhook URLs
   rootEnvContent = updateEnvVar(rootEnvContent, 'MESSAGE_WEBHOOK_URL', messageWebhookUrl);
   rootEnvContent = updateEnvVar(rootEnvContent, 'GROUP_EVENT_WEBHOOK_URL', groupEventWebhookUrl);
   rootEnvContent = updateEnvVar(rootEnvContent, 'REACTION_WEBHOOK_URL', reactionWebhookUrl);
-  
+
   // Also update Docker volume .env file
   const dockerEnvPath = path.join(process.cwd(), 'zalo_data', '.env');
   let dockerEnvContent = '';
-  
+
   // Read existing Docker .env content if it exists
   if (fs.existsSync(dockerEnvPath)) {
     dockerEnvContent = fs.readFileSync(dockerEnvPath, 'utf8');
   }
-  
+
   // Update all three webhook URLs in Docker .env
   dockerEnvContent = updateEnvVar(dockerEnvContent, 'MESSAGE_WEBHOOK_URL', messageWebhookUrl);
   dockerEnvContent = updateEnvVar(dockerEnvContent, 'GROUP_EVENT_WEBHOOK_URL', groupEventWebhookUrl);
   dockerEnvContent = updateEnvVar(dockerEnvContent, 'REACTION_WEBHOOK_URL', reactionWebhookUrl);
-  
+
   // Write to both .env files
   try {
     fs.writeFileSync(rootEnvPath, rootEnvContent);
@@ -254,13 +254,28 @@ router.get('/user-management', (req, res) => {
   if (!req.session || !req.session.authenticated || req.session.role !== 'admin') {
     return res.redirect('/admin-login');
   }
-  
+
   res.render('user-management');
 });
 
 // Hiển thị trang quản lý webhook theo tài khoản
 router.get('/account-webhook-manager', (req, res) => {
     res.render('account-webhook-manager');
+});
+
+// Hiển thị trang đổi mật khẩu
+router.get('/change-password', (req, res) => {
+    // Kiểm tra xem người dùng đã đăng nhập chưa
+    if (!req.session || !req.session.authenticated) {
+        return res.redirect('/admin-login');
+    }
+
+    res.render('change-password');
+});
+
+// Hiển thị trang reset mật khẩu admin
+router.get('/reset-password', (req, res) => {
+    res.render('reset-password');
 });
 
 export default router;

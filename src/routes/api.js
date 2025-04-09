@@ -2,14 +2,15 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { 
-    findUser, 
-    getUserInfo, 
-    sendFriendRequest, 
+import crypto from 'crypto';
+import {
+    findUser,
+    getUserInfo,
+    sendFriendRequest,
     sendMessage,
-    createGroup, 
-    getGroupInfo, 
-    addUserToGroup, 
+    createGroup,
+    getGroupInfo,
+    addUserToGroup,
     removeUserFromGroup,
     sendImageToUser,
     sendImagesToUser,
@@ -17,11 +18,11 @@ import {
     sendImagesToGroup
 } from '../api/zalo/zalo.js';
 import { validateUser, adminMiddleware, addUser, getAllUsers, changePassword } from '../services/authService.js';
-import { 
-    getWebhookUrl, 
-    setWebhookUrl, 
-    removeWebhookConfig, 
-    getAllWebhookConfigs 
+import {
+    getWebhookUrl,
+    setWebhookUrl,
+    removeWebhookConfig,
+    getAllWebhookConfigs
 } from '../services/webhookService.js';
 
 const router = express.Router();
@@ -35,61 +36,69 @@ const __dirname = path.dirname(__filename);
 router.post('/login', (req, res) => {
   try {
     console.log('Login attempt:', req.body);
-    
+
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       console.log('Missing username or password');
       return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ tài khoản và mật khẩu' });
     }
-    
+
     const user = validateUser(username, password);
     console.log('User validation result:', user);
-    
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'Tài khoản hoặc mật khẩu không chính xác' });
     }
-    
+
     // Kiểm tra req.session tồn tại
     if (!req.session) {
       console.error('Session object is not available!');
-      return res.status(500).json({ 
-        success: false, 
+      return res.status(500).json({
+        success: false,
         message: 'Lỗi server: session không khả dụng',
         debug: 'req.session is undefined'
       });
     }
-    
+
     // Thiết lập session
     req.session.authenticated = true;
     req.session.username = user.username;
     req.session.role = user.role;
-    
+
     console.log('Login successful, session set:', {
       authenticated: req.session.authenticated,
       username: req.session.username,
       role: req.session.role
     });
-    
+
     res.json({ success: true, user });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Lỗi server khi xử lý đăng nhập', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi xử lý đăng nhập',
+      error: error.message
     });
   }
 });
 
-// Đăng xuất
-router.post('/logout', (req, res) => {
-  req.session.destroy(err => {
-    if (err) {
-      return res.status(500).json({ success: false, message: 'Lỗi khi đăng xuất' });
-    }
+// Đăng xuất (hỗ trợ cả GET và POST)
+router.all('/logout', (req, res) => {
+  console.log('Logout requested');
+  if (req.session) {
+    req.session.destroy(err => {
+      if (err) {
+        console.error('Error destroying session:', err);
+        return res.status(500).json({ success: false, message: 'Lỗi khi đăng xuất' });
+      }
+      console.log('Session destroyed successfully');
+      res.json({ success: true, message: 'Đã đăng xuất thành công' });
+    });
+  } else {
+    console.log('No session to destroy');
     res.json({ success: true, message: 'Đã đăng xuất thành công' });
-  });
+  }
 });
 
 // Lấy thông tin người dùng hiện tại
@@ -97,7 +106,7 @@ router.get('/user', (req, res) => {
   if (!req.session.authenticated) {
     return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
   }
-  
+
   res.json({
     success: true,
     user: {
@@ -117,49 +126,61 @@ router.get('/users', adminMiddleware, (req, res) => {
 // Thêm người dùng mới
 router.post('/users', adminMiddleware, (req, res) => {
   const { username, password, role } = req.body;
-  
+
   if (!username || !password) {
     return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ tài khoản và mật khẩu' });
   }
-  
+
   const success = addUser(username, password, role || 'user');
   if (!success) {
     return res.status(400).json({ success: false, message: 'Tài khoản đã tồn tại' });
   }
-  
+
   res.json({ success: true, message: 'Đã thêm người dùng thành công' });
 });
 
 // Đổi mật khẩu
 router.post('/change-password', (req, res) => {
+  console.log('Change password request received');
+  console.log('Session info:', req.session ? 'exists' : 'missing');
+  console.log('Authenticated:', req.session?.authenticated);
+  console.log('Username:', req.session?.username);
+
   if (!req.session.authenticated) {
+    console.log('Authentication check failed - user not logged in');
     return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
   }
-  
+
+  console.log('Request body:', JSON.stringify(req.body));
   const { oldPassword, newPassword } = req.body;
-  
+
   if (!oldPassword || !newPassword) {
+    console.log('Missing required fields - oldPassword or newPassword');
     return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ mật khẩu cũ và mới' });
   }
-  
+
+  console.log(`Calling changePassword for user: ${req.session.username}`);
   const success = changePassword(req.session.username, oldPassword, newPassword);
+  console.log(`Change password result: ${success ? 'SUCCESS' : 'FAILED'}`);
+
   if (!success) {
     return res.status(400).json({ success: false, message: 'Mật khẩu cũ không chính xác' });
   }
-  
+
+  console.log('Password change successful - sending response');
   res.json({ success: true, message: 'Đã đổi mật khẩu thành công' });
 });
 
 // Kiểm tra phiên đăng nhập
 router.get('/check-auth', (req, res) => {
   if (req.session.authenticated) {
-    return res.json({ 
-      authenticated: true, 
+    return res.json({
+      authenticated: true,
       username: req.session.username,
       role: req.session.role
     });
   }
-  
+
   res.json({ authenticated: false });
 });
 
@@ -167,7 +188,7 @@ router.get('/check-auth', (req, res) => {
 router.post('/simple-login', (req, res) => {
   try {
     console.log('Simple login attempt:', req.body);
-    
+
     // Đảm bảo có dữ liệu hợp lệ
     if (!req.body || typeof req.body !== 'object') {
       console.error('Invalid request body:', req.body);
@@ -176,9 +197,9 @@ router.post('/simple-login', (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       return res.status(400).json(errorResponse);
     }
-    
+
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       console.log('Missing username or password');
       const errorResponse = { success: false, message: 'Vui lòng nhập đầy đủ tài khoản và mật khẩu' };
@@ -186,12 +207,17 @@ router.post('/simple-login', (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       return res.status(400).json(errorResponse);
     }
-    
+
     // Kiểm tra session object
     console.log('Session before login:', req.session ? 'exists' : 'missing');
-    
-    // Chỉ kiểm tra tài khoản admin/admin
-    if (username === 'admin' && password === 'admin') {
+
+    // Sử dụng hàm validateUser để xác thực
+    console.log(`Login attempt: username=${username}, password=provided`);
+    console.log(`Session info: session ${req.session ? 'exists ' + req.sessionID : 'missing'}`);
+
+    const user = validateUser(username, password);
+
+    if (user) {
       // Xử lý trường hợp không có req.session
       if (!req.session) {
         console.error('Session object is not available - missing session middleware?');
@@ -201,13 +227,13 @@ router.post('/simple-login', (req, res) => {
         return res.status(500).json(errorResponse);
       }
 
-      // Thiết lập session thủ công và trả về ngay lập tức
+      // Thiết lập session với thông tin người dùng đã xác thực
       req.session.authenticated = true;
-      req.session.username = 'admin';
-      req.session.role = 'admin';
-      
+      req.session.username = user.username;
+      req.session.role = user.role;
+
       console.log('Session set, returning response immediately');
-      
+
       const successResponse = {
         success: true,
         user: { username: 'admin', role: 'admin' },
@@ -255,7 +281,7 @@ router.get('/session-test', (req, res) => {
   try {
     // Kiểm tra session object có tồn tại không
     const hasSession = !!req.session;
-    
+
     // Lấy thông tin session hiện tại
     const sessionInfo = {
       exists: hasSession,
@@ -270,7 +296,7 @@ router.get('/session-test', (req, res) => {
         path: req.session.cookie.path
       } : 'no-cookie'
     };
-    
+
     // Trả về thông tin
     return res.json({
       success: true,
@@ -290,38 +316,43 @@ router.get('/session-test', (req, res) => {
 // Thêm một API đăng nhập đơn giản mới để test - simplified
 router.post('/test-login', (req, res) => {
   console.log('Test login received:', req.body);
-  
+
   try {
     const { username, password } = req.body || {};
-    
+
     console.log(`Login attempt: username=${username}, password=${typeof password === 'string' ? 'provided' : 'missing'}`);
     console.log('Session info:', req.session ? 'session exists' : 'no session', req.sessionID || 'no session ID');
-    
+
     // Basic validation
     if (!username || !password) {
       console.log('Missing username or password');
       return res.status(400).json({ success: false, message: 'Tài khoản và mật khẩu không được để trống' });
     }
-    
-    // Simple check
-    if (username === 'admin' && password === 'admin') {
+
+    // Sử dụng hàm validateUser để xác thực
+    console.log(`Login attempt: username=${username}, password=provided`);
+    console.log(`Session info: session ${req.session ? 'exists ' + req.sessionID : 'missing'}`);
+
+    const user = validateUser(username, password);
+
+    if (user) {
       // Set session if available
       if (req.session) {
         req.session.authenticated = true;
-        req.session.username = 'admin';
-        req.session.role = 'admin';
-        
+        req.session.username = user.username;
+        req.session.role = user.role;
+
         // Force save session to ensure cookie is set
         req.session.save(err => {
           if (err) {
             console.error('Session save error:', err);
           }
-          
+
           console.log('Session saved:', req.sessionID);
-          
+
           // Success response with session ID
-          return res.json({ 
-            success: true, 
+          return res.json({
+            success: true,
             user: { username: 'admin', role: 'admin' },
             sessionID: req.sessionID,
             message: 'Đăng nhập thành công'
@@ -329,8 +360,8 @@ router.post('/test-login', (req, res) => {
         });
       } else {
         console.error('No session object available');
-        return res.json({ 
-          success: true, 
+        return res.json({
+          success: true,
           user: { username: 'admin', role: 'admin' },
           sessionAvailable: false,
           message: 'Đăng nhập thành công, nhưng session không khả dụng'
@@ -378,15 +409,15 @@ router.get('/account-webhooks', (req, res) => {
 router.get('/account-webhook/:ownId', (req, res) => {
     try {
         const { ownId } = req.params;
-        
+
         if (!ownId) {
             return res.status(400).json({ success: false, error: 'ownId là bắt buộc' });
         }
-        
+
         const messageWebhookUrl = getWebhookUrl('messageWebhookUrl', ownId);
         const groupEventWebhookUrl = getWebhookUrl('groupEventWebhookUrl', ownId);
         const reactionWebhookUrl = getWebhookUrl('reactionWebhookUrl', ownId);
-        
+
         res.json({
             success: true,
             data: {
@@ -405,26 +436,26 @@ router.get('/account-webhook/:ownId', (req, res) => {
 router.post('/account-webhook', (req, res) => {
     try {
         const { ownId, messageWebhookUrl, groupEventWebhookUrl, reactionWebhookUrl } = req.body;
-        
+
         if (!ownId) {
             return res.status(400).json({ success: false, error: 'ownId là bắt buộc' });
         }
-        
+
         let success = true;
-        
+
         // Thiết lập từng loại webhook URL nếu được cung cấp
         if (messageWebhookUrl !== undefined) {
             success = success && setWebhookUrl(ownId, 'messageWebhookUrl', messageWebhookUrl);
         }
-        
+
         if (groupEventWebhookUrl !== undefined) {
             success = success && setWebhookUrl(ownId, 'groupEventWebhookUrl', groupEventWebhookUrl);
         }
-        
+
         if (reactionWebhookUrl !== undefined) {
             success = success && setWebhookUrl(ownId, 'reactionWebhookUrl', reactionWebhookUrl);
         }
-        
+
         if (success) {
             res.json({ success: true, message: 'Đã cập nhật webhook URLs cho tài khoản' });
         } else {
@@ -439,11 +470,11 @@ router.post('/account-webhook', (req, res) => {
 router.delete('/account-webhook/:ownId', (req, res) => {
     try {
         const { ownId } = req.params;
-        
+
         if (!ownId) {
             return res.status(400).json({ success: false, error: 'ownId là bắt buộc' });
         }
-        
+
         if (removeWebhookConfig(ownId)) {
             res.json({ success: true, message: 'Đã xóa cấu hình webhook cho tài khoản' });
         } else {
@@ -459,7 +490,7 @@ router.get('/debug-webhook-config', (req, res) => {
     try {
         const webhookConfigs = getAllWebhookConfigs();
         const fileExists = fs.existsSync(path.join(__dirname, 'webhookConfig.json'));
-        
+
         res.json({
             success: true,
             configExists: !!webhookConfigs,
@@ -468,6 +499,125 @@ router.get('/debug-webhook-config', (req, res) => {
             dirname: __dirname,
             configPath: path.join(__dirname, 'webhookConfig.json')
         });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Endpoint debug để kiểm tra file users.json
+router.get('/debug-users-file', (req, res) => {
+    try {
+        const userFilePath = path.join(process.cwd(), 'data', 'cookies', 'users.json');
+        const fileExists = fs.existsSync(userFilePath);
+        let fileContent = null;
+        let users = [];
+
+        if (fileExists) {
+            fileContent = fs.readFileSync(userFilePath, 'utf8');
+            try {
+                users = JSON.parse(fileContent);
+                // Che giấu thông tin nhạy cảm
+                users = users.map(user => ({
+                    username: user.username,
+                    role: user.role,
+                    saltLength: user.salt ? user.salt.length : 0,
+                    hashLength: user.hash ? user.hash.length : 0,
+                    saltPrefix: user.salt ? user.salt.substring(0, 5) + '...' : null,
+                    hashPrefix: user.hash ? user.hash.substring(0, 5) + '...' : null
+                }));
+            } catch (parseError) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Invalid JSON in users file',
+                    parseError: parseError.message
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            fileExists: fileExists,
+            filePath: userFilePath,
+            fileSize: fileContent ? fileContent.length : 0,
+            users: users
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+// Endpoint để reset mật khẩu về mặc định (hỗ trợ cả GET và POST)
+router.all('/reset-admin-password', (req, res) => {
+    try {
+        const userFilePath = path.join(process.cwd(), 'data', 'cookies', 'users.json');
+        const fileExists = fs.existsSync(userFilePath);
+
+        if (!fileExists) {
+            return res.status(404).json({
+                success: false,
+                error: 'File users.json không tồn tại'
+            });
+        }
+
+        // Đọc file hiện tại
+        let users = [];
+        try {
+            const fileContent = fs.readFileSync(userFilePath, 'utf8');
+            users = JSON.parse(fileContent);
+        } catch (parseError) {
+            return res.status(500).json({
+                success: false,
+                error: 'Lỗi khi đọc file users.json',
+                parseError: parseError.message
+            });
+        }
+
+        // Tìm user admin
+        const adminIndex = users.findIndex(user => user.username === 'admin');
+        if (adminIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                error: 'Không tìm thấy tài khoản admin'
+            });
+        }
+
+        // Tạo mật khẩu mặc định mới
+        const defaultPassword = 'admin';
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = crypto.pbkdf2Sync(defaultPassword, salt, 1000, 64, 'sha512').toString('hex');
+
+        // Cập nhật user admin
+        users[adminIndex].salt = salt;
+        users[adminIndex].hash = hash;
+
+        // Ghi lại file
+        try {
+            // Tạo file tạm thời
+            const tempFilePath = path.join(process.cwd(), 'data', 'cookies', 'users.json.tmp');
+            fs.writeFileSync(tempFilePath, JSON.stringify(users, null, 2), { encoding: 'utf8', flag: 'w' });
+
+            // Di chuyển file tạm thời thành file chính thức
+            fs.renameSync(tempFilePath, userFilePath);
+
+            return res.json({
+                success: true,
+                message: 'Đã reset mật khẩu admin về mặc định (admin)'
+            });
+        } catch (writeError) {
+            return res.status(500).json({
+                success: false,
+                error: 'Lỗi khi ghi file users.json',
+                writeError: writeError.message
+            });
+        }
     } catch (error) {
         res.status(500).json({
             success: false,

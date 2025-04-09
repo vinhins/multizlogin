@@ -50,6 +50,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Dùng để parse dữ liệu form
 app.use(cookieParser());
 
+// Thiết lập middleware phục vụ file tĩnh
+app.use(express.static(path.join(__dirname, 'public')));
+console.log('Static files path:', path.join(__dirname, 'public'));
+
 // Định nghĩa SESSION_SECRET từ biến môi trường hoặc mặc định
 const sessionSecret = process.env.SESSION_SECRET || 'zalo-server-secret-key';
 console.log("Using session secret:", sessionSecret ? "Configured properly" : "MISSING SESSION SECRET");
@@ -60,7 +64,7 @@ app.use(session({
   resave: true, // Thay đổi thành true để đảm bảo session được lưu lại sau mỗi request
   saveUninitialized: true, // Thay đổi thành true để đảm bảo session được lưu ngay cả khi chưa có dữ liệu
   name: 'zalo-server.sid', // Tên cookie cụ thể
-  cookie: { 
+  cookie: {
     secure: false, // false để hoạt động với HTTP
     httpOnly: true, // Chỉ truy cập được qua HTTP, không qua JS
     maxAge: 24 * 60 * 60 * 1000, // 24 giờ
@@ -84,7 +88,7 @@ app.use((req, res, next) => {
     console.log(`Skipping auth for public route: ${req.path}`);
     return next();
   }
-  
+
   // Áp dụng middleware xác thực cho các route khác
   console.log(`Applying auth middleware for protected route: ${req.path}`);
   authMiddleware(req, res, next);
@@ -100,7 +104,7 @@ if (fs.existsSync(cookiesDir)) {
         const cookieFiles = fs.readdirSync(cookiesDir);
         if (zaloAccounts.length < cookieFiles.length) {
             console.log('Số lượng tài khoản Zalo nhỏ hơn số lượng cookie files. Đang đăng nhập lại từ cookie...');
-            
+
             // Sử dụng IIFE để tránh top-level await
             (async function() {
                 for (const file of cookieFiles) {
