@@ -9,6 +9,500 @@ import { saveImage, removeImage } from '../../utils/helpers.js';
 
 export const zaloAccounts = [];
 
+// API để lấy danh sách tài khoản đã đăng nhập
+export async function getLoggedAccounts(req, res) {
+    try {
+        const accounts = zaloAccounts.map(acc => ({
+            ownId: acc.ownId,
+            phoneNumber: acc.phoneNumber,
+            proxy: acc.proxy || 'Không có proxy',
+            displayName: `${acc.phoneNumber} (${acc.ownId})`,
+            isOnline: acc.api ? true : false
+        }));
+
+        res.json({
+            success: true,
+            data: accounts,
+            total: accounts.length
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API để lấy thông tin chi tiết một tài khoản
+export async function getAccountDetails(req, res) {
+    try {
+        const { ownId } = req.params;
+        const account = zaloAccounts.find(acc => acc.ownId === ownId);
+
+        if (!account) {
+            return res.status(404).json({ error: 'Không tìm thấy tài khoản' });
+        }
+
+        // Lấy thông tin profile từ API
+        const accountInfo = await account.api.fetchAccountInfo();
+
+        res.json({
+            success: true,
+            data: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber,
+                proxy: account.proxy || 'Không có proxy',
+                profile: accountInfo?.profile || {},
+                isOnline: account.api ? true : false
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// ===== N8N-FRIENDLY WRAPPER APIs =====
+// Các API này sử dụng account selection thay vì ownId
+
+// Middleware để xử lý account selection
+function getAccountFromSelection(accountSelection) {
+    if (!accountSelection) {
+        throw new Error('Vui lòng chọn tài khoản');
+    }
+
+    // Hỗ trợ cả ownId và phoneNumber
+    let account = zaloAccounts.find(acc => acc.ownId === accountSelection);
+    if (!account) {
+        account = zaloAccounts.find(acc => acc.phoneNumber === accountSelection);
+    }
+
+    if (!account) {
+        throw new Error(`Không tìm thấy tài khoản: ${accountSelection}`);
+    }
+
+    return account;
+}
+
+// API tìm user với account selection
+export async function findUserByAccount(req, res) {
+    try {
+        const { phone, accountSelection } = req.body;
+
+        if (!phone) {
+            return res.status(400).json({ error: 'Số điện thoại là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const userData = await account.api.findUser(phone);
+
+        res.json({
+            success: true,
+            data: userData,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API gửi tin nhắn với account selection
+export async function sendMessageByAccount(req, res) {
+    try {
+        const { message, threadId, type, accountSelection } = req.body;
+
+        if (!message || !threadId) {
+            return res.status(400).json({ error: 'Tin nhắn và threadId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const msgType = type || ThreadType.User;
+        const result = await account.api.sendMessage(message, threadId, msgType);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API gửi hình ảnh với account selection
+export async function sendImageByAccount(req, res) {
+    try {
+        const { imagePath: imageUrl, threadId, type, accountSelection } = req.body;
+
+        if (!imageUrl || !threadId) {
+            return res.status(400).json({ error: 'Đường dẫn hình ảnh và threadId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const imagePath = await saveImage(imageUrl);
+
+        if (!imagePath) {
+            return res.status(500).json({ success: false, error: 'Không thể lưu hình ảnh' });
+        }
+
+        const threadType = type === 'group' ? ThreadType.Group : ThreadType.User;
+        const result = await account.api.sendMessage(
+            {
+                msg: "",
+                attachments: [imagePath]
+            },
+            threadId,
+            threadType
+        );
+
+        removeImage(imagePath);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API lấy thông tin user với account selection
+export async function getUserInfoByAccount(req, res) {
+    try {
+        const { userId, accountSelection } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'UserId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const info = await account.api.getUserInfo(userId);
+
+        res.json({
+            success: true,
+            data: info,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API gửi lời mời kết bạn với account selection
+export async function sendFriendRequestByAccount(req, res) {
+    try {
+        const { userId, message, accountSelection } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'UserId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const friendMessage = message || 'Xin chào, hãy kết bạn với tôi!';
+        const result = await account.api.sendFriendRequest(friendMessage, userId);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API tạo nhóm với account selection
+export async function createGroupByAccount(req, res) {
+    try {
+        const { members, name, avatarPath, accountSelection } = req.body;
+
+        if (!members || !Array.isArray(members) || members.length === 0) {
+            return res.status(400).json({ error: 'Danh sách thành viên là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const result = await account.api.createGroup({ members, name, avatarPath });
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API lấy thông tin nhóm với account selection
+export async function getGroupInfoByAccount(req, res) {
+    try {
+        const { groupId, accountSelection } = req.body;
+
+        if (!groupId || (Array.isArray(groupId) && groupId.length === 0)) {
+            return res.status(400).json({ error: 'GroupId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const result = await account.api.getGroupInfo(groupId);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API thêm thành viên vào nhóm với account selection
+export async function addUserToGroupByAccount(req, res) {
+    try {
+        const { groupId, memberId, accountSelection } = req.body;
+
+        if (!groupId || !memberId || (Array.isArray(memberId) && memberId.length === 0)) {
+            return res.status(400).json({ error: 'GroupId và memberId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const result = await account.api.addUserToGroup(memberId, groupId);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API xóa thành viên khỏi nhóm với account selection
+export async function removeUserFromGroupByAccount(req, res) {
+    try {
+        const { memberId, groupId, accountSelection } = req.body;
+
+        if (!groupId || !memberId || (Array.isArray(memberId) && memberId.length === 0)) {
+            return res.status(400).json({ error: 'GroupId và memberId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const result = await account.api.removeUserFromGroup(memberId, groupId);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API gửi hình ảnh đến user với account selection
+export async function sendImageToUserByAccount(req, res) {
+    try {
+        const { imagePath: imageUrl, threadId, accountSelection } = req.body;
+
+        if (!imageUrl || !threadId) {
+            return res.status(400).json({ error: 'Đường dẫn hình ảnh và threadId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const imagePath = await saveImage(imageUrl);
+
+        if (!imagePath) {
+            return res.status(500).json({ success: false, error: 'Không thể lưu hình ảnh' });
+        }
+
+        const result = await account.api.sendMessage(
+            {
+                msg: "",
+                attachments: [imagePath]
+            },
+            threadId,
+            ThreadType.User
+        );
+
+        removeImage(imagePath);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API gửi nhiều hình ảnh đến user với account selection
+export async function sendImagesToUserByAccount(req, res) {
+    try {
+        const { imagePaths: imageUrls, threadId, accountSelection } = req.body;
+
+        if (!imageUrls || !threadId || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+            return res.status(400).json({ error: 'Danh sách hình ảnh và threadId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const imagePaths = [];
+
+        for (const imageUrl of imageUrls) {
+            const imagePath = await saveImage(imageUrl);
+            if (!imagePath) {
+                // Clean up any saved images
+                for (const path of imagePaths) {
+                    removeImage(path);
+                }
+                return res.status(500).json({ success: false, error: 'Không thể lưu một hoặc nhiều hình ảnh' });
+            }
+            imagePaths.push(imagePath);
+        }
+
+        const result = await account.api.sendMessage(
+            {
+                msg: "",
+                attachments: imagePaths
+            },
+            threadId,
+            ThreadType.User
+        );
+
+        for (const imagePath of imagePaths) {
+            removeImage(imagePath);
+        }
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API gửi hình ảnh đến nhóm với account selection
+export async function sendImageToGroupByAccount(req, res) {
+    try {
+        const { imagePath: imageUrl, threadId, accountSelection } = req.body;
+
+        if (!imageUrl || !threadId) {
+            return res.status(400).json({ error: 'Đường dẫn hình ảnh và threadId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const imagePath = await saveImage(imageUrl);
+
+        if (!imagePath) {
+            return res.status(500).json({ success: false, error: 'Không thể lưu hình ảnh' });
+        }
+
+        const result = await account.api.sendMessage(
+            {
+                msg: "",
+                attachments: [imagePath]
+            },
+            threadId,
+            ThreadType.Group
+        );
+
+        removeImage(imagePath);
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
+// API gửi nhiều hình ảnh đến nhóm với account selection
+export async function sendImagesToGroupByAccount(req, res) {
+    try {
+        const { imagePaths: imageUrls, threadId, accountSelection } = req.body;
+
+        if (!imageUrls || !threadId || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+            return res.status(400).json({ error: 'Danh sách hình ảnh và threadId là bắt buộc' });
+        }
+
+        const account = getAccountFromSelection(accountSelection);
+        const imagePaths = [];
+
+        for (const imageUrl of imageUrls) {
+            const imagePath = await saveImage(imageUrl);
+            if (!imagePath) {
+                // Clean up any saved images
+                for (const path of imagePaths) {
+                    removeImage(path);
+                }
+                return res.status(500).json({ success: false, error: 'Không thể lưu một hoặc nhiều hình ảnh' });
+            }
+            imagePaths.push(imagePath);
+        }
+
+        const result = await account.api.sendMessage(
+            {
+                msg: "",
+                attachments: imagePaths
+            },
+            threadId,
+            ThreadType.Group
+        );
+
+        for (const imagePath of imagePaths) {
+            removeImage(imagePath);
+        }
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
 export async function findUser(req, res) {
     try {
         const { phone, ownId } = req.body;
@@ -162,7 +656,7 @@ export async function sendImageToUser(req, res) {
             return res.status(400).json({ error: 'Dữ liệu không hợp lệ: imagePath và threadId là bắt buộc' });
         }
 
-       
+
         const imagePath = await saveImage(imageUrl);
         if (!imagePath) return res.status(500).json({ success: false, error: 'Failed to save image' });
 
@@ -195,7 +689,7 @@ export async function sendImagesToUser(req, res) {
             return res.status(400).json({ error: 'Dữ liệu không hợp lệ: imagePaths phải là mảng không rỗng và threadId là bắt buộc' });
         }
 
-      
+
         const imagePaths = [];
         for (const imageUrl of imageUrls) {
             const imagePath = await saveImage(imageUrl);
@@ -240,7 +734,7 @@ export async function sendImageToGroup(req, res) {
             return res.status(400).json({ error: 'Dữ liệu không hợp lệ: imagePath và threadId là bắt buộc' });
         }
 
-       
+
         const imagePath = await saveImage(imageUrl);
         if (!imagePath) return res.status(500).json({ success: false, error: 'Failed to save image' });
 
@@ -273,7 +767,7 @@ export async function sendImagesToGroup(req, res) {
             return res.status(400).json({ error: 'Dữ liệu không hợp lệ: imagePaths phải là mảng không rỗng và threadId là bắt buộc' });
         }
 
-      
+
         const imagePaths = [];
         for (const imageUrl of imageUrls) {
             const imagePath = await saveImage(imageUrl);
@@ -316,7 +810,7 @@ export async function loginZaloAccount(customProxy, cred) {
         console.log('Bắt đầu quá trình đăng nhập Zalo...');
         console.log('Custom proxy:', customProxy || 'không có');
         console.log('Đang nhập với cookie:', cred ? 'có' : 'không');
-        
+
         loginResolve = resolve;
         let agent;
         let proxyUsed = null;
@@ -434,7 +928,7 @@ export async function loginZaloAccount(customProxy, cred) {
                 console.log("Zalo SDK đã kết nối");
                 resolve(true);
             });
-            
+
             console.log('Thiết lập event listeners');
             setupEventListeners(api, loginResolve);
             api.listener.start();
@@ -445,7 +939,7 @@ export async function loginZaloAccount(customProxy, cred) {
                 proxyUsed.accounts.push(api);
                 console.log(`Đã cập nhật proxy ${proxyUsed.url} với usedCount = ${proxyUsed.usedCount}`);
             }
-            
+
             console.log('Đang lấy thông tin tài khoản...');
             const accountInfo = await api.fetchAccountInfo();
             if (!accountInfo?.profile) {

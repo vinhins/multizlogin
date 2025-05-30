@@ -15,7 +15,24 @@ import {
     sendImageToUser,
     sendImagesToUser,
     sendImageToGroup,
-    sendImagesToGroup
+    sendImagesToGroup,
+    // New APIs for account management
+    getLoggedAccounts,
+    getAccountDetails,
+    // N8N-friendly wrapper APIs
+    findUserByAccount,
+    getUserInfoByAccount,
+    sendFriendRequestByAccount,
+    sendMessageByAccount,
+    createGroupByAccount,
+    getGroupInfoByAccount,
+    addUserToGroupByAccount,
+    removeUserFromGroupByAccount,
+    sendImageByAccount,
+    sendImageToUserByAccount,
+    sendImagesToUserByAccount,
+    sendImageToGroupByAccount,
+    sendImagesToGroupByAccount
 } from '../api/zalo/zalo.js';
 import { validateUser, adminMiddleware, addUser, getAllUsers, changePassword } from '../services/authService.js';
 import {
@@ -275,6 +292,53 @@ router.post('/sendImageToUser', sendImageToUser);
 router.post('/sendImagesToUser', sendImagesToUser);
 router.post('/sendImageToGroup', sendImageToGroup);
 router.post('/sendImagesToGroup', sendImagesToGroup);
+
+// ===== NEW ACCOUNT MANAGEMENT APIs =====
+// API để lấy danh sách tài khoản đã đăng nhập
+router.get('/accounts', getLoggedAccounts);
+
+// API để lấy thông tin chi tiết một tài khoản
+router.get('/accounts/:ownId', getAccountDetails);
+
+// ===== N8N-FRIENDLY WRAPPER APIs =====
+// API tìm user với account selection (thay vì ownId)
+router.post('/findUserByAccount', findUserByAccount);
+
+// API gửi tin nhắn với account selection
+router.post('/sendMessageByAccount', sendMessageByAccount);
+
+// API gửi hình ảnh với account selection
+router.post('/sendImageByAccount', sendImageByAccount);
+
+// API lấy thông tin user với account selection
+router.post('/getUserInfoByAccount', getUserInfoByAccount);
+
+// API gửi lời mời kết bạn với account selection
+router.post('/sendFriendRequestByAccount', sendFriendRequestByAccount);
+
+// API tạo nhóm với account selection
+router.post('/createGroupByAccount', createGroupByAccount);
+
+// API lấy thông tin nhóm với account selection
+router.post('/getGroupInfoByAccount', getGroupInfoByAccount);
+
+// API thêm thành viên vào nhóm với account selection
+router.post('/addUserToGroupByAccount', addUserToGroupByAccount);
+
+// API xóa thành viên khỏi nhóm với account selection
+router.post('/removeUserFromGroupByAccount', removeUserFromGroupByAccount);
+
+// API gửi hình ảnh đến user với account selection
+router.post('/sendImageToUserByAccount', sendImageToUserByAccount);
+
+// API gửi nhiều hình ảnh đến user với account selection
+router.post('/sendImagesToUserByAccount', sendImagesToUserByAccount);
+
+// API gửi hình ảnh đến nhóm với account selection
+router.post('/sendImageToGroupByAccount', sendImageToGroupByAccount);
+
+// API gửi nhiều hình ảnh đến nhóm với account selection
+router.post('/sendImagesToGroupByAccount', sendImagesToGroupByAccount);
 
 // API kiểm tra trạng thái session
 router.get('/session-test', (req, res) => {
