@@ -49,8 +49,8 @@ export async function checkAccountLoginStatus(req, res) {
         }
 
         if (!account) {
-            return res.json({
-                success: true,
+            return res.status(400).json({
+                success: false,
                 data: {
                     accountSelection: accountSelection,
                     isLoggedIn: false,
@@ -555,58 +555,7 @@ export async function sendImagesToGroupByAccount(req, res) {
 }
 
 // API verify user với account selection - gửi OTP
-export async function verifyUserByAccount(req, res) {
-    try {
-        const { phone, accountSelection } = req.body;
 
-        if (!phone) {
-            return res.status(400).json({ error: 'Số điện thoại là bắt buộc' });
-        }
-
-        if (!accountSelection) {
-            return res.status(400).json({ error: 'Account selection là bắt buộc' });
-        }
-
-        const account = getAccountFromSelection(accountSelection);
-        
-        // Tìm user theo số điện thoại
-        const userData = await account.api.findUser(phone);
-        
-        if (!userData || !userData.userId) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Không tìm thấy người dùng với số điện thoại này' 
-            });
-        }
-
-        // Tạo mã OTP ngẫu nhiên (6 chữ số)
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const otpMessage = `Mã xác thực OTP của bạn là: ${otp}. Vui lòng không chia sẻ mã này với ai khác.`;
-
-        // Gửi tin nhắn OTP đến user
-        const result = await account.api.sendMessage(otpMessage, userData.userId, ThreadType.User);
-
-        res.json({
-            success: true,
-            data: {
-                otp: otp,
-                message: "OTP đã được gửi thành công",
-                sentToUser: {
-                    userId: userData.userId,
-                    phoneNumber: phone,
-                    displayName: userData.displayName || null
-                },
-                messageResult: result
-            },
-            usedAccount: {
-                ownId: account.ownId,
-                phoneNumber: account.phoneNumber
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-}
 
 export async function findUser(req, res) {
     try {

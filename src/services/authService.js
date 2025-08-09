@@ -355,7 +355,6 @@ export const publicRoutes = [
   // Thêm các API mới với account selection
   '/api/findUserByAccount',
   '/api/sendMessageByAccount',
-  '/api/verifyUserByAccount',
   '/api/checkAccountLoginStatus'
 ];
 
