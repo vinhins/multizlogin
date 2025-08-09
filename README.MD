@@ -155,6 +155,35 @@ MultiZlogin được thiết kế để tích hợp dễ dàng với n8n để t
 2. Cấu hình webhook URL trong MultiZlogin để trỏ đến URL của Webhook Node
 3. Các sự kiện từ Zalo sẽ được gửi đến n8n để xử lý
 
+## Tích hợp Supabase Edge Functions
+
+Dự án này cung cấp các Supabase Edge Functions để tích hợp với các ứng dụng bên ngoài thông qua Supabase.
+
+### Các Edge Functions có sẵn
+
+- **find-user-by-account**: Gọi API `/api/findUserByAccount` để tìm người dùng bằng số điện thoại
+
+### Cách sử dụng
+
+1. Thiết lập Supabase project và deploy functions:
+   ```bash
+   supabase functions deploy find-user-by-account
+   ```
+
+2. Cấu hình biến môi trường `API_BASE_URL` trong Supabase để trỏ đến server API của bạn
+
+3. Gọi function từ ứng dụng của bạn:
+   ```javascript
+   const { data, error } = await supabase.functions.invoke('find-user-by-account', {
+     body: {
+       phone: '0123456789',
+       accountSelection: 'first'
+     }
+   })
+   ```
+
+Xem [tài liệu Supabase chi tiết](./supabase/README.md) để biết thêm thông tin về cách thiết lập và sử dụng.
+
 ## Đóng góp
 
 Mọi đóng góp đều được hoan nghênh! Vui lòng mở issue hoặc pull request để cải thiện dự án.

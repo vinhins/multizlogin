@@ -42,3 +42,7 @@ jspm_packages/
 
 cred*
 .qodo
+
+# Supabase
+supabase/.env.local
+supabase/.env
