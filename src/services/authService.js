@@ -350,7 +350,12 @@ export const publicRoutes = [
   '/api/sendImageToUser',
   '/api/sendImagesToUser',
   '/api/sendImageToGroup',
-  '/api/sendImagesToGroup'
+  '/api/sendImagesToGroup',
+  
+  // Thêm các API mới với account selection
+  '/api/findUserByAccount',
+  '/api/sendMessageByAccount',
+  '/api/verifyUserByAccount'
 ];
 
 // Kiểm tra xem route có phải là public hay không

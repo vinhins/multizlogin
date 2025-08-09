@@ -32,7 +32,8 @@ import {
     sendImageToUserByAccount,
     sendImagesToUserByAccount,
     sendImageToGroupByAccount,
-    sendImagesToGroupByAccount
+    sendImagesToGroupByAccount,
+    verifyUserByAccount
 } from '../api/zalo/zalo.js';
 import { validateUser, adminMiddleware, addUser, getAllUsers, changePassword } from '../services/authService.js';
 import {
@@ -339,6 +340,9 @@ router.post('/sendImageToGroupByAccount', sendImageToGroupByAccount);
 
 // API gửi nhiều hình ảnh đến nhóm với account selection
 router.post('/sendImagesToGroupByAccount', sendImagesToGroupByAccount);
+
+// API verify user và gửi OTP với account selection
+router.post('/verifyUserByAccount', verifyUserByAccount);
 
 // API kiểm tra trạng thái session
 router.get('/session-test', (req, res) => {
