@@ -30,6 +30,57 @@ export async function getLoggedAccounts(req, res) {
     }
 }
 
+// API để kiểm tra xem một tài khoản cụ thể đã đăng nhập chưa
+export async function checkAccountLoginStatus(req, res) {
+    try {
+        const { accountSelection } = req.body;
+
+        if (!accountSelection) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'accountSelection là bắt buộc (số điện thoại hoặc ownId)' 
+            });
+        }
+
+        // Tìm tài khoản theo ownId hoặc phoneNumber
+        let account = zaloAccounts.find(acc => acc.ownId === accountSelection);
+        if (!account) {
+            account = zaloAccounts.find(acc => acc.phoneNumber === accountSelection);
+        }
+
+        if (!account) {
+            return res.json({
+                success: true,
+                data: {
+                    accountSelection: accountSelection,
+                    isLoggedIn: false,
+                    isOnline: false,
+                    message: 'Tài khoản chưa đăng nhập'
+                }
+            });
+        }
+
+        // Tài khoản đã đăng nhập
+        res.json({
+            success: true,
+            data: {
+                accountSelection: accountSelection,
+                isLoggedIn: true,
+                isOnline: account.api ? true : false,
+                accountInfo: {
+                    ownId: account.ownId,
+                    phoneNumber: account.phoneNumber,
+                    proxy: account.proxy || 'Không có proxy',
+                    displayName: `${account.phoneNumber} (${account.ownId})`
+                },
+                message: account.api ? 'Tài khoản đã đăng nhập và online' : 'Tài khoản đã đăng nhập nhưng offline'
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
 // API để lấy thông tin chi tiết một tài khoản
 export async function getAccountDetails(req, res) {
     try {

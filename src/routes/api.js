@@ -19,6 +19,7 @@ import {
     // New APIs for account management
     getLoggedAccounts,
     getAccountDetails,
+    checkAccountLoginStatus,
     // N8N-friendly wrapper APIs
     findUserByAccount,
     getUserInfoByAccount,
@@ -300,6 +301,9 @@ router.get('/accounts', getLoggedAccounts);
 
 // API để lấy thông tin chi tiết một tài khoản
 router.get('/accounts/:ownId', getAccountDetails);
+
+// API để kiểm tra trạng thái đăng nhập của một tài khoản cụ thể
+router.post('/checkAccountLoginStatus', checkAccountLoginStatus);
 
 // ===== N8N-FRIENDLY WRAPPER APIs =====
 // API tìm user với account selection (thay vì ownId)
