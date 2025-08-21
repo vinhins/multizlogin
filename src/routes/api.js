@@ -28,6 +28,7 @@ import {
     getGroupInfoByAccount,
     addUserToGroupByAccount,
     removeUserFromGroupByAccount,
+    getGroupsByAccount,
     sendImageByAccount,
     sendImageToUserByAccount,
     sendImagesToUserByAccount,
@@ -327,6 +328,9 @@ router.post('/addUserToGroupByAccount', addUserToGroupByAccount);
 
 // API xóa thành viên khỏi nhóm với account selection
 router.post('/removeUserFromGroupByAccount', removeUserFromGroupByAccount);
+
+// API lấy danh sách nhóm với account selection
+router.post('/getGroupsByAccount', getGroupsByAccount);
 
 // API gửi hình ảnh đến user với account selection
 router.post('/sendImageToUserByAccount', sendImageToUserByAccount);

@@ -323,6 +323,27 @@ export async function removeUserFromGroupByAccount(req, res) {
     }
 }
 
+// API lấy danh sách nhóm với account selection
+export async function getGroupsByAccount(req, res) {
+    try {
+        const { accountSelection } = req.body;
+
+        const account = getAccountFromSelection(accountSelection);
+        const result = await account.api.getAllGroups();
+
+        res.json({
+            success: true,
+            data: result,
+            usedAccount: {
+                ownId: account.ownId,
+                phoneNumber: account.phoneNumber
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+
 // API gửi hình ảnh đến user với account selection
 export async function sendImageToUserByAccount(req, res) {
     try {
